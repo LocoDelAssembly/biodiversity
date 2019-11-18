@@ -1,3 +1,7 @@
 module Biodiversity
-  VERSION = "3.5.1"
+  VERSION = "4.0.0"
+
+  def self.version
+    VERSION
+  end
 end
