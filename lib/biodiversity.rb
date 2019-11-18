@@ -1,15 +1,9 @@
-require 'treetop'
-require 'json'
-require 'open-uri'
+# frozen_string_literal: true
+
+require 'ffi'
 require_relative 'biodiversity/version'
 require_relative 'biodiversity/parser'
-require_relative 'biodiversity/guid'
 
+# Biodiversity module provides a namespace for scientific name parser.
 module Biodiversity
-  LSID_RESOLVER_URL = 'http://lsid.tdwg.org/' 
-
-  def self.version
-    VERSION
-  end
 end
-
