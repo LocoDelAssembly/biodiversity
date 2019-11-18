@@ -15,12 +15,12 @@ module Biodiversity
     platform = case Gem.platforms[1].os
                when 'linux'
                  'linux'
-               when 'mac'
+               when 'darwin'
                  'mac'
                when 'mswin64'
                  'win'
                else
-                 raise "Unsupported platform: #{Gem.platform[1].os}"
+                 raise "Unsupported platform: #{Gem.platforms[1].os}"
                end
     ffi_lib File.join(__dir__, '..', '..', 'clib', platform, 'libgnparser.so')
     POINTER_SIZE = FFI.type_size(:pointer)
