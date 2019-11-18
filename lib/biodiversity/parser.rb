@@ -32,7 +32,7 @@ module Biodiversity
     def self.parse(name, simple = false)
       format = simple ? 'simple' : 'compact'
       parsed = parse_go(name, format)
-      self.output(parsed, simple)
+      output(parsed, simple)
     end
 
     def self.parse_ary(ary, simple = false)
@@ -45,8 +45,9 @@ module Biodiversity
       parse_ary_go(in_ptr, ary.length, format, out_var)
 
       out_var.read_pointer
-             .get_array_of_string(0, ary.length).each_with_object([]) do |prsd, ary|
-        ary << output(prsd, simple)
+             .get_array_of_string(0, ary.length)
+             .each_with_object([]) do |prsd, a|
+        a << output(prsd, simple)
       end
     ensure
       out_var.read_pointer.get_array_of_pointer(0, ary.length).each do |p|

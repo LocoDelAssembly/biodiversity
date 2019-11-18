@@ -1,4 +1,6 @@
-#s frozen_string_literal: true
+# frozen_string_literal: true
+
+# s frozen_string_literal: true
 
 describe Biodiversity::Parser do
   describe('parse') do

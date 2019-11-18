@@ -2,4 +2,12 @@ AllCops:
   Exclude:
     - .bundle/**/*
     - bundle_bin/**/*
-
+Metrics/AbcSize:
+  Exclude:
+    - lib/**/*
+Metrics/MethodLength:
+  Exclude:
+    - lib/**/*
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
