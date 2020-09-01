@@ -12,5 +12,6 @@ branches:
   only:
       - master
       - ipc-mode
-allow_failures:
-  - os: windows
+jobs:
+  allow_failures:
+    - os: windows
