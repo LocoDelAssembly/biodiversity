@@ -17,6 +17,8 @@ Gem::Specification.new do |gem|
   gem.files         = `git ls-files`.split("\n")
   gem.require_paths = ['lib']
 
+  gem.required_ruby_version = '>= 2.5'
+
   gem.add_runtime_dependency 'ffi', '~> 1.11'
 
   gem.add_development_dependency 'bundler', '~> 2.0'
