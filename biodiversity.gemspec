@@ -19,8 +19,6 @@ Gem::Specification.new do |gem|
 
   gem.required_ruby_version = '>= 2.5'
 
-  gem.add_runtime_dependency 'ffi', '~> 1.11'
-
   gem.add_development_dependency 'bundler', '~> 2.0'
   gem.add_development_dependency 'byebug', '~> 11.0'
   gem.add_development_dependency 'rake', '~> 13.0'
