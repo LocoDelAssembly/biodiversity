@@ -1,60 +1,18 @@
 # frozen_string_literal: true
 
-# CLib is required to free memory after it is used by C
-module CLib
-  extend FFI::Library
-  ffi_lib FFI::Library::LIBC
-  attach_function :free, [:pointer], :void
-end
+require 'open3'
+require 'csv'
 
 module Biodiversity
   # Parser provides a namespace for functions to parse scientific names.
   module Parser
-    extend FFI::Library
-
-    platform = case Gem.platforms[1].os
-               when 'linux'
-                 'linux'
-               when 'darwin'
-                 'mac'
-               when 'mingw32'
-                 'win'
-               else
-                 raise "Unsupported platform: #{Gem.platforms[1].os}"
-               end
-    ffi_lib File.join(__dir__, '..', '..', 'clib', platform, 'libgnparser.so')
-    POINTER_SIZE = FFI.type_size(:pointer)
-
-    callback(:parser_callback, %i[string], :void)
-
-    attach_function(:parse_go, :ParseToString,
-                    %i[string string parser_callback], :void)
-    attach_function(:parse_ary_go, :ParseAryToStrings,
-                    %i[pointer int string parser_callback], :void)
-
     def self.parse(name, simple = false)
-      format = simple ? 'csv' : 'compact'
-
-      parsed = nil
-      callback = FFI::Function.new(:void, [:string]) { |str| parsed = str }
-      parse_go(name, format, callback)
+      parsed = simple ? parse_go_csv(name) : parse_go_compact(name)
       output(parsed, simple)
     end
 
     def self.parse_ary(ary, simple = false)
-      format = simple ? 'csv' : 'compact'
-      in_ptr = FFI::MemoryPointer.new(:pointer, ary.length)
-
-      in_ptr.write_array_of_pointer(
-        ary.map { |s| FFI::MemoryPointer.from_string(s) }
-      )
-
-      out_ary = []
-      callback = FFI::Function.new(:void, [:string]) do |str|
-        out_ary << output(str, simple)
-      end
-      parse_ary_go(in_ptr, ary.length, format, callback)
-      out_ary
+      ary.map { |n| parse(n, simple) }
     end
 
     def self.output(parsed, simple)
@@ -62,21 +20,75 @@ module Biodiversity
         csv = CSV.new(parsed)
         parsed = csv.read[0]
         {
-          id: parsed[0],
-          verbatim: parsed[1],
-          cardinality: parsed[2],
+          id: get_csv_value(parsed, 'Id'),
+          verbatim: get_csv_value(parsed, 'Verbatim'),
+          cardinality: get_csv_value(parsed, 'Cardinality'),
           canonicalName: {
-            full: parsed[3],
-            simple: parsed[4],
-            stem: parsed[5]
+            full: get_csv_value(parsed, 'CanonicalFull'),
+            simple: get_csv_value(parsed, 'CanonicalSimple'),
+            stem: get_csv_value(parsed, 'CanonicalStem')
           },
-          authorship: parsed[6],
-          year: parsed[7],
-          quality: parsed[8]
+          authorship: get_csv_value(parsed, 'Authorship'),
+          year: get_csv_value(parsed, 'Year'),
+          quality: get_csv_value(parsed, 'Quality')
         }
       else
         JSON.parse(parsed, symbolize_names: true)
       end
+    end
+
+    @csv_mapping = {}
+
+    private_class_method def self.get_csv_value(csv, field_name)
+      csv[@csv_mapping[field_name]]
+    end
+
+    private_class_method def self.start_gnparser
+      io = {}
+
+      platform_suffix =
+        case Gem.platforms[1].os
+        when 'linux'
+          'linux'
+        when 'darwin'
+          'mac'
+        when 'mingw32'
+          'win.exe'
+        else
+          raise "Unsupported platform: #{Gem.platforms[1].os}"
+        end
+
+      path = File.join(__dir__, '..', '..',
+                       'binaries', "gnparser-#{platform_suffix}")
+
+      %w[compact csv].each do |format|
+        stdin, stdout, stderr = Open3.popen3("#{path} --format #{format}")
+        io[format.to_sym] = { stdin: stdin, stdout: stdout, stderr: stderr }
+      end
+
+      CSV.new(io[:csv][:stdout].gets).read[0].each.with_index do |header, index|
+        @csv_mapping[header] = index
+      end
+
+      io
+    end
+
+    @semaphore = Mutex.new
+    @io = start_gnparser
+
+    private_class_method def self.parse_go(name, format)
+      @semaphore.synchronize do
+        @io[format][:stdin].puts(name)
+        @io[format][:stdout].gets
+      end
+    end
+
+    private_class_method def self.parse_go_compact(name)
+      parse_go(name, :compact)
+    end
+
+    private_class_method def self.parse_go_csv(name)
+      parse_go(name, :csv)
     end
   end
 end
