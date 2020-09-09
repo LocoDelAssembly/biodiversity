@@ -44,6 +44,7 @@ module Biodiversity
     end
 
     private_class_method def self.start_gnparser
+      @pid = Process.pid
       io = {}
 
       platform_suffix =
@@ -70,14 +71,15 @@ module Biodiversity
         @csv_mapping[header] = index
       end
 
-      io
+      @io = io
     end
 
     @semaphore = Mutex.new
-    @io = start_gnparser
+    @pid = nil
 
     private_class_method def self.parse_go(name, format)
       @semaphore.synchronize do
+        start_gnparser unless Process.pid == @pid
         @io[format][:stdin].puts(name)
         @io[format][:stdout].gets
       end
