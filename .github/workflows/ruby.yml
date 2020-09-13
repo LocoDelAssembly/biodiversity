@@ -36,3 +36,7 @@ jobs:
       run: gem environment
     - name: Run tests
       run: bundle exec rake
+    - name: Checking install works
+      run: rake install
+    - name: Check gem with IRB
+      run: cd && pwd && echo "require 'biodiversity'; Biodiversity::Parser.parse('Testidae')" | irb
