@@ -17,3 +17,4 @@ bin
 bundle_bin
 Gemfile.lock
 .byebug_history
+ext/gnparser*

@@ -44,23 +44,11 @@ module Biodiversity
     end
 
     private_class_method def self.start_gnparser
-      @pid = Process.pid
       io = {}
 
-      platform_suffix =
-        case Gem.platforms[1].os
-        when 'linux'
-          'linux'
-        when 'darwin'
-          'mac'
-        when 'mingw32'
-          'win.exe'
-        else
-          raise "Unsupported platform: #{Gem.platforms[1].os}"
-        end
-
+      platform_suffix = Gem.platforms[1].os == 'mingw32' ? '.exe' : ''
       path = File.join(__dir__, '..', '..',
-                       'binaries', "gnparser-#{platform_suffix}")
+                       'ext', "gnparser#{platform_suffix}")
 
       %w[compact csv].each do |format|
         stdin, stdout, stderr = Open3.popen3("#{path} --format #{format}")
@@ -71,6 +59,7 @@ module Biodiversity
         @csv_mapping[header] = index
       end
 
+      @pid = Process.pid
       @io = io
     end
 
