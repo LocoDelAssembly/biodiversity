@@ -28,5 +28,5 @@ task :download_gnparser do
   `rm #{exe_path}/#{url_path.split('/').last}`
 
   raise 'gnpaser download failed!' unless
-    system("#{exe_path}/gnparser --version")
+    `#{exe_path}/gnparser --version`&.include? 'v0.14.1'
 end
