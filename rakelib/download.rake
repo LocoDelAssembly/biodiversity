@@ -18,9 +18,13 @@ task :download_gnparser do
   exe_path = "#{File.expand_path('..', __dir__)}/ext"
 
   unless File.exist? "#{exe_path}/gnparser"
-    `curl -o #{exe_path}/gnparser.tar.gz #{url}`
-    `tar xf #{exe_path}/gnparser.tar.gz -C #{exe_path}`
-    `rm #{exe_path}/gnparser.tar.gz`
+    `curl -o #{exe_path}/#{url_path.split('/').last} #{url}`
+    if url.end_with?('zip')
+      `unzip #{exe_path}/#{url_path.split('/').last} -d #{exe_path}`
+    else
+      `tar xf #{exe_path}/#{url_path.split('/').last} -C #{exe_path}`
+    end
+    `rm #{exe_path}/#{url_path.split('/').last}`
   end
 
   raise 'gnpaser download failed!' unless
