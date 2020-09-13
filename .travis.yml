@@ -1,7 +1,17 @@
+os:
+  - linux
+  - osx
+  - windows
+language: ruby
 rvm:
   - 2.5
   - 2.6
+  - 2.7
 before_install: "gem update bundler"
 branches:
   only:
       - master
+      - ipc-mode
+jobs:
+  allow_failures:
+    - os: windows
