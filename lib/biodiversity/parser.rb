@@ -7,34 +7,41 @@ module Biodiversity
   # Parser provides a namespace for functions to parse scientific names.
   module Parser
     def self.parse(name, simple = false)
-      parsed = simple ? parse_go_csv(name) : parse_go_compact(name)
-      output(parsed, simple)
+      if simple
+        output_csv(parse_go_csv(name))
+      else
+        output_compact(parse_go_compact(name))
+      end
     end
 
     def self.parse_ary(ary, simple = false)
-      ary.map { |n| parse(n, simple) }
+      if simple
+        parse_ary_go_csv(ary)
+      else
+        parse_ary_go_compact(ary)
+      end
     end
 
-    def self.output(parsed, simple)
-      if simple
-        csv = CSV.new(parsed)
-        parsed = csv.read[0]
-        {
-          id: get_csv_value(parsed, 'Id'),
-          verbatim: get_csv_value(parsed, 'Verbatim'),
-          cardinality: get_csv_value(parsed, 'Cardinality'),
-          canonicalName: {
-            full: get_csv_value(parsed, 'CanonicalFull'),
-            simple: get_csv_value(parsed, 'CanonicalSimple'),
-            stem: get_csv_value(parsed, 'CanonicalStem')
-          },
-          authorship: get_csv_value(parsed, 'Authorship'),
-          year: get_csv_value(parsed, 'Year'),
-          quality: get_csv_value(parsed, 'Quality')
-        }
-      else
-        JSON.parse(parsed, symbolize_names: true)
-      end
+    private_class_method def self.output_csv(parsed)
+      csv = CSV.new(parsed)
+      parsed = csv.read[0]
+      {
+        id: get_csv_value(parsed, 'Id'),
+        verbatim: get_csv_value(parsed, 'Verbatim'),
+        cardinality: get_csv_value(parsed, 'Cardinality'),
+        canonicalName: {
+          full: get_csv_value(parsed, 'CanonicalFull'),
+          simple: get_csv_value(parsed, 'CanonicalSimple'),
+          stem: get_csv_value(parsed, 'CanonicalStem')
+        },
+        authorship: get_csv_value(parsed, 'Authorship'),
+        year: get_csv_value(parsed, 'Year'),
+        quality: get_csv_value(parsed, 'Quality')
+      }
+    end
+
+    private_class_method def self.output_compact(parsed)
+      JSON.parse(parsed, symbolize_names: true)
     end
 
     @csv_mapping = {}
@@ -51,7 +58,7 @@ module Biodiversity
                        'ext', "gnparser#{platform_suffix}")
 
       %w[compact csv].each do |format|
-        stdin, stdout, stderr = Open3.popen3("#{path} --format #{format}")
+        stdin, stdout, stderr = Open3.popen3("#{path} --format #{format} -j1")
         io[format.to_sym] = { stdin: stdin, stdout: stdout, stderr: stderr }
       end
 
@@ -80,6 +87,27 @@ module Biodiversity
 
     private_class_method def self.parse_go_csv(name)
       parse_go(name, :csv)
+    end
+
+    private_class_method def self.parse_ary_go(ary, format, simple)
+      @semaphore.synchronize do
+        start_gnparser unless Process.pid == @pid
+        Thread.new { @io[format][:stdin].puts(ary) }
+
+        if simple
+          ary.map { output_csv(@io[format][:stdout].gets) }
+        else
+          ary.map { output_compact(@io[format][:stdout].gets) }
+        end
+      end
+    end
+
+    private_class_method def self.parse_ary_go_compact(ary)
+      parse_ary_go(ary, :compact, false)
+    end
+
+    private_class_method def self.parse_ary_go_csv(ary)
+      parse_ary_go(ary, :csv, true)
     end
   end
 end
