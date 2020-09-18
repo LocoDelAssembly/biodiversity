@@ -58,7 +58,7 @@ module Biodiversity
                        'ext', "gnparser#{platform_suffix}")
 
       %w[compact csv].each do |format|
-        stdin, stdout, stderr = Open3.popen3("#{path} --format #{format} -j1")
+        stdin, stdout, stderr = Open3.popen3("#{path} --format #{format}")
         io[format.to_sym] = { stdin: stdin, stdout: stdout, stderr: stderr }
       end
 
@@ -73,10 +73,14 @@ module Biodiversity
     @semaphore = Mutex.new
     @pid = nil
 
+    private_class_method def self.clean_name(name)
+      name.gsub(/(\n|\r\n|\r)/, ' ')
+    end
+
     private_class_method def self.parse_go(name, format)
       @semaphore.synchronize do
         start_gnparser unless Process.pid == @pid
-        @io[format][:stdin].puts(name)
+        @io[format][:stdin].puts(clean_name(name))
         @io[format][:stdout].gets
       end
     end
@@ -92,13 +96,26 @@ module Biodiversity
     private_class_method def self.parse_ary_go(ary, format, simple)
       @semaphore.synchronize do
         start_gnparser unless Process.pid == @pid
-        Thread.new { @io[format][:stdin].puts(ary) }
 
-        if simple
-          ary.map { output_csv(@io[format][:stdout].gets) }
-        else
-          ary.map { output_compact(@io[format][:stdout].gets) }
+        count = ary.count
+        Thread.new do
+          ary.each { |n| @io[format][:stdin].puts(clean_name(n)) }
         end
+
+        hsh = {}
+        if simple
+          count.times.each do
+            res = output_csv(@io[format][:stdout].gets)
+            hsh[res[:verbatim]] = res
+          end
+        else
+          count.times.each do
+            res = output_compact(@io[format][:stdout].gets)
+            hsh[res[:verbatim]] = res
+          end
+        end
+
+        ary.map { |n| hsh[clean_name(n)] }
       end
     end
 
