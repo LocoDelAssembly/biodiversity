@@ -40,9 +40,19 @@ module Biodiversity
       end
 
       def start_gnparser
-        platform_suffix = Gem.platforms[1].os == 'mingw32' ? '.exe' : ''
+        platform_suffix =
+          case Gem.platforms[1].os
+          when 'linux'
+            'linux'
+          when 'darwin'
+            'mac'
+          when 'mingw32'
+            'win.exe'
+          else
+            raise "Unsupported platform: #{Gem.platforms[1].os}"
+          end
         path = File.join(__dir__, '..', '..', '..',
-                         'ext', "gnparser#{platform_suffix}")
+                         'ext', "gnparser-#{platform_suffix}")
 
         @stdin, @stdout, @stderr = Open3.popen3("#{path} --format #{format}")
 

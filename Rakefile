@@ -12,7 +12,7 @@ RSpec::Core::RakeTask.new(:spec) do |rspec|
 end
 
 RuboCop::RakeTask.new
-task default: %i[rubocop download_gnparser spec]
+task default: %i[rubocop spec]
 
 desc 'open an irb session preloaded with this gem'
 task :console do
