@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'open3'
-require 'csv'
 require_relative 'parser/gnparser'
 
 module Biodiversity
