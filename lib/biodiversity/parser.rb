@@ -7,6 +7,7 @@ module CLib
   attach_function :free, [:pointer], :void
 end
 
+# Biodiversity provides a namespace for the gem.
 module Biodiversity
   # Parser provides a namespace for functions to parse scientific names.
   module Parser
@@ -25,6 +26,8 @@ module Biodiversity
     ffi_lib File.join(__dir__, '..', '..', 'clib', platform, 'libgnparser.so')
     POINTER_SIZE = FFI.type_size(:pointer)
 
+    @semaphore = Mutex.new
+
     callback(:parser_callback, %i[string], :void)
 
     attach_function(:parse_go, :ParseToString,
@@ -34,31 +37,35 @@ module Biodiversity
     attach_function(:free_mem, :FreeMemory, %i[pointer], :void)
 
     def self.parse(name, simple: false)
-      format = simple ? 'csv' : 'compact'
-      with_details = simple ? 0 : 1
+      sync do
+        format = simple ? 'csv' : 'compact'
+        with_details = simple ? 0 : 1
 
-      parsed, ptr = parse_go(name, format, with_details)
-      free_mem(ptr)
-      output(parsed, simple)
+        parsed, ptr = parse_go(name, format, with_details)
+        free_mem(ptr)
+        output(parsed, simple)
+      end
     end
 
     def self.parse_ary(ary, simple: false)
-      format = simple ? 'csv' : 'compact'
-      with_details = simple ? 0 : 1
+      sync do
+        format = simple ? 'csv' : 'compact'
+        with_details = simple ? 0 : 1
 
-      in_ptr = FFI::MemoryPointer.new(:pointer, ary.length)
-      in_ptr.write_array_of_pointer(
-        ary.map { |s| FFI::MemoryPointer.from_string(s) }
-      )
+        in_ptr = FFI::MemoryPointer.new(:pointer, ary.length)
+        in_ptr.write_array_of_pointer(
+          ary.map { |s| FFI::MemoryPointer.from_string(s) }
+        )
 
-      parsed, ptr = parse_ary_go(in_ptr, ary.length, format, with_details)
-      free_mem(ptr)
-      if simple
-        CSV.new(parsed).map do |row|
-          csv_row(row)
+        parsed, ptr = parse_ary_go(in_ptr, ary.length, format, with_details)
+        free_mem(ptr)
+        if simple
+          CSV.new(parsed).map do |row|
+            csv_row(row)
+          end
+        else
+          JSON.parse(parsed, symbolize_names: true)
         end
-      else
-        JSON.parse(parsed, symbolize_names: true)
       end
     end
 
@@ -87,5 +94,15 @@ module Biodiversity
         quality: row[8]
       }
     end
+
+    private
+
+    def self.sync(&block)
+      @semaphore.synchronize do
+        yield block
+      end
+    end
+
+    private_class_method :sync
   end
 end
